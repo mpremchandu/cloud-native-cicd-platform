@@ -1,14 +1,32 @@
-from fastapi import APIRouter
+from fastapi import APIRouter, Depends
+from sqlalchemy.orm import Session
+
+from app.dependencies import get_db
+from app.models.task import Task
+from app.schemas.task import TaskCreate, TaskResponse
 
 router = APIRouter()
 
-tasks = []
+@router.post("/tasks", response_model=TaskResponse)
+def create_task(
+    task: TaskCreate,
+    db: Session = Depends(get_db)
+):
+    new_task = Task(
+        title=task.title,
+        description=task.description
+    )
 
-@router.get("/tasks")
-def get_tasks():
+    db.add(new_task)
+
+    db.commit()
+
+    db.refresh(new_task)
+
+    return new_task
+
+@router.get("/tasks", response_model=list[TaskResponse])
+def get_tasks(db: Session = Depends(get_db)):
+    tasks = db.query(Task).all()
+
     return tasks
-
-@router.post("/tasks")
-def create_task(task: dict):
-    tasks.append(task)
-    return {"message": "Task added"}
